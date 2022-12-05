@@ -1,3 +1,4 @@
+const likes = require("../models/likes.model");
 const posts = require("../models/posts.model");
 
 const CREATE_POST = async(req,res)=>{
@@ -61,7 +62,8 @@ const GET_BY_ID = async(req,res)=>{
         let id = parseInt(req.params.id)
         const result = await posts.findOne({id:id})
         if(result !== null){
-            return res.send({status:true,count:1,all_posts_details:result})
+            const post_like = await likes.find({post_id:id})
+            return res.send({status:true,count:1,all_posts_details:result,likes:post_like.length})
         }else{
             return res.send({status:false,message:"id not found..."})
         }
@@ -97,10 +99,17 @@ const DELETE_BY_ID = async(req,res)=>{
         let id = parseInt(req.params.id)
         let user_id = res.tokendata.id
         const result = await posts.findOne({id:id})
+        const post_like = await likes.find({post:id})
         if(result !== null){
             if(result.user_id !== user_id) return res.send({status:true,message:'you dont have permision for update this post, because you are not owner this post....'})
-            const update_data = await posts.deleteOne({id:id})
-            return res.send({status:true,message:'data deleted successfully...'})
+            if(post_like.length > 0){
+                const delete_post = await posts.deleteOne({id:id})
+                const delete_like = await likes.deleteMany({post_id:id})
+                return res.send({status:true,message:'data deleted successfully...'})
+            }else{
+                const update_data = await posts.deleteOne({id:id})
+                return res.send({status:true,message:'data deleted successfully...'})
+            }
         }else{
             return res.send({status:false,message:"id not found..."})
         }
